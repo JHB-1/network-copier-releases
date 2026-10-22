@@ -79,7 +79,7 @@ jobs:
             fi
           else
             gh release create "$tag" --draft --target "$GITHUB_SHA" --title "Network Copier Android $version" \
-              --notes "Android 8.0+ / arm64-v8a and x86_64. Download network_copier.apk. Version 0.1.0 is a separate app from ClipBridge; old settings and login are not imported."
+              --notes "Android 8.0+ / arm64-v8a and x86_64. Download network_copier.apk or use Check for updates in the app."
             gh release upload "$tag" bundle/android/*
             gh release edit "$tag" --draft=false --latest=false
           fi
@@ -96,7 +96,7 @@ jobs:
             fi
           else
             gh release create "$channel" --draft --target "$GITHUB_SHA" --title "Network Copier Android — latest" \
-              --notes "Download network_copier.apk. This stable channel is for org.networkcopier.android; legacy ClipBridge releases remain separate."
+              --notes "Download network_copier.apk or use Check for updates in the Android app."
           fi
           gh release upload "$channel" bundle/android/* --clobber
           gh release edit "$channel" --draft=false --prerelease=false --latest=false
