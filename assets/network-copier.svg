@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64">
+  <title>Network Copier</title>
+  <path d="M14 0h36a14 14 0 0 1 14 14v36a14 14 0 0 1-14 14H14A14 14 0 0 1 0 50V14A14 14 0 0 1 14 0Z" fill="#245AD0"/>
+  <path d="M30 10h13l10 10v25a4 4 0 0 1-4 4H30a4 4 0 0 1-4-4V14a4 4 0 0 1 4-4Z" fill="#8EC5FF"/>
+  <path d="M43 10v10h10Z" fill="#D6EAFF"/>
+  <path d="M15 21h17l10 10v20a4 4 0 0 1-4 4H15a4 4 0 0 1-4-4V25a4 4 0 0 1 4-4Z" fill="#FFFFFF"/>
+  <path d="M32 21v10h10Z" fill="#D6EAFF"/>
+  <path d="M18 34h13v-4l8 7-8 7v-4H18Z" fill="#245AD0"/>
+  <path d="M35 45H22v-4l-8 7 8 7v-4h13Z" fill="#087F8C"/>
+</svg>

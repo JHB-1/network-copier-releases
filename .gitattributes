@@ -1,4 +1,4 @@
 # 서명과 배포 바이트는 플랫폼별 줄바꿈 변환 금지
-bundle/* -text
+bundle/** -text
 *.yml text eol=lf
 *.md text eol=lf

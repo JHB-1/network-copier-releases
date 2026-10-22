@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="176" viewBox="0 0 900 176">
+  <title>Network Copier 사용 흐름</title>
+  <rect width="900" height="176" rx="18" fill="#F3F6FC"/>
+  <g font-family="Malgun Gothic, Noto Sans KR, sans-serif" text-anchor="middle">
+    <rect x="18" y="26" width="246" height="124" rx="14" fill="#FFFFFF" stroke="#CFDAED"/>
+    <text x="141" y="65" font-size="15" fill="#52647F">PC · Android</text>
+    <text x="141" y="97" font-size="22" font-weight="bold" fill="#15294A">복사</text>
+    <text x="141" y="125" font-size="14" fill="#52647F">텍스트 · 이미지 · 파일</text>
+    <rect x="337" y="26" width="226" height="124" rx="14" fill="#245AD0"/>
+    <text x="450" y="87" font-size="22" font-weight="bold" fill="#FFFFFF">Google Drive</text>
+    <text x="450" y="117" font-size="14" fill="#E2ECFF">내 계정으로 전달</text>
+    <rect x="636" y="26" width="246" height="124" rx="14" fill="#FFFFFF" stroke="#CFDAED"/>
+    <text x="759" y="65" font-size="15" fill="#52647F">다른 PC · Android</text>
+    <text x="759" y="97" font-size="22" font-weight="bold" fill="#15294A">가져와서 붙여넣기</text>
+    <text x="759" y="125" font-size="14" fill="#52647F">Ctrl+Alt+숫자 / 앱에서 선택</text>
+  </g>
+  <path d="M279 83h37m-10-8 10 8-10 8M578 83h37m-10-8 10 8-10 8"
+    fill="none" stroke="#245AD0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
