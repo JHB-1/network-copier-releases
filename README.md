@@ -8,6 +8,10 @@ Windows x64: download **clipbridge.exe**, run it, then sign in to Google in your
 
 Version 0.3.0+ checks this repository for signed updates. Newer builds are downloaded in the background and restart only when transfers and pending clips are finished. Failed startup triggers rollback. Existing pre-updater installations need this EXE installed once manually.
 
+If an older build reports **Update helper did not become ready**, exit ClipBridge and replace its EXE with the latest download once. Settings and Google login remain. The fixed updater shows download progress, verification, waiting reasons and restart results under **Check for updates**.
+
+기존 버전에서 **Update helper did not become ready**가 나오면 앱을 종료하고 최신 EXE로 한 번 직접 교체하세요. 설정과 로그인은 유지됩니다. 수정본은 **업데이트 확인**에서 진행률·검증·설치 대기 이유·재시작 결과를 표시합니다.
+
 This repository contains release binaries, signed update metadata, LGPL relink materials, and the publication workflow. Application source is maintained privately. Official downloaded updates require valid signatures; running a locally relinked EXE does not require a developer signature. Release signing is separate from Windows Authenticode.
 
 Qt Core/Gui/Widgets are statically linked under LGPLv3 on Windows. Ordinary use needs only the EXE. The matching `clipbridge-lgpl-relink.tar.gz` contains application objects/libraries, exact Qt source, licenses, and rebuild instructions for replacing Qt. No user settings, login tokens, or private signing keys are included. Disable automatic updates to retain your locally modified Qt build.
