@@ -1,102 +1,135 @@
 name: Publish signed binaries
-on:
-  push:
-    branches: [main]
-    paths: ['bundle/**']
+run-name: ${{ inputs.pool_title || format('{0} / {1} / {2} / {3}', github.event.repository.name, inputs.pool_profile, inputs.pool_sha,
+  inputs.pool_request) }}
+'on':
   workflow_dispatch:
+    inputs:
+      pool_title:
+        type: string
+        required: false
+      pool_runner:
+        type: string
+        required: true
+      pool_request:
+        type: string
+        required: true
+      pool_sha:
+        type: string
+        required: true
+      pool_profile:
+        type: string
+        required: true
 permissions:
   contents: write
 concurrency:
-  group: public-release
+  group: ${{ github.workflow }}-${{ inputs.pool_request }}
   cancel-in-progress: false
 jobs:
-  windows:
-    runs-on: ubuntu-24.04
+  build:
+    runs-on: ${{ fromJSON(inputs.pool_runner) }}
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: ${{ startsWith(inputs.pool_profile, 'windows') && 'pwsh' || 'bash' }}
     steps:
-      - uses: actions/checkout@v7
-      - name: Validate bundle and publish
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          test -f bundle/windows/update.json || exit 0
-          id=$(jq -er '.build_id | numbers' bundle/windows/update.json)
-          version=$(jq -er '.version | strings' bundle/windows/update.json)
-          test "$id" -gt 0
-          [[ "$id" =~ ^[0-9]+$ ]]
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          test "$(jq -r .platform bundle/windows/update.json)" = windows-x64
-          test "$(jq -r .schema bundle/windows/update.json)" = 2
-          test "$(jq -r .app bundle/windows/update.json)" = org.networkcopier.desktop
-          test "$(stat -c %s bundle/windows/network_copier.exe)" = "$(jq -r .size bundle/windows/update.json)"
-          test "$(sha256sum bundle/windows/network_copier.exe | cut -d' ' -f1)" = "$(jq -r .sha256 bundle/windows/update.json)"
-          test "$(stat -c %s bundle/windows/update.sig)" = 64
-          test -s bundle/windows/network_copier-lgpl-relink.tar.gz
-          tag="build-$id"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = true || exit 0
+    - name: pool/${{ inputs.pool_request }}/${{ inputs.pool_profile }}/${{ inputs.pool_sha }}
+      shell: bash
+      env:
+        POOL_REQUEST: ${{ inputs.pool_request }}
+        POOL_SHA: ${{ inputs.pool_sha }}
+        POOL_PROFILE: ${{ inputs.pool_profile }}
+      run: |
+        python3 - <<'PY'
+        import json, os
+        from pathlib import Path
+        with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as stream:
+            stream.write(json.dumps({key: os.environ[key] for key in ('POOL_REQUEST', 'POOL_SHA', 'POOL_PROFILE')}) + '\n')
+        PY
+    - uses: actions/checkout@v7
+      with:
+        ref: ${{ inputs.pool_sha }}
+        persist-credentials: false
+    - name: Prepare GitHub CLI
+      run: python3 scripts/prepare_gh.py
+    - name: Validate bundle and publish
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        test -f bundle/windows/update.json || exit 0
+        id=$(jq -er '.build_id | numbers' bundle/windows/update.json)
+        version=$(jq -er '.version | strings' bundle/windows/update.json)
+        test "$id" -gt 0
+        [[ "$id" =~ ^[0-9]+$ ]]
+        [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+        test "$(jq -r .platform bundle/windows/update.json)" = windows-x64
+        test "$(jq -r .schema bundle/windows/update.json)" = 2
+        test "$(jq -r .app bundle/windows/update.json)" = org.networkcopier.desktop
+        test "$(stat -c %s bundle/windows/network_copier.exe)" = "$(jq -r .size bundle/windows/update.json)"
+        test "$(sha256sum bundle/windows/network_copier.exe | cut -d' ' -f1)" = "$(jq -r .sha256 bundle/windows/update.json)"
+        test "$(stat -c %s bundle/windows/update.sig)" = 64
+        test -s bundle/windows/network_copier-lgpl-relink.tar.gz
+        tag="build-$id"
+        if gh release view "$tag" >/dev/null 2>&1; then
+          test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = true || exit 0
+        else
+          gh release create "$tag" --draft --target "$GITHUB_SHA" --title "Network Copier $version ($id)" \
+            --notes "Windows x64 portable executable. Download network_copier.exe. Signed manifest accompanies automatic updates. LGPL Qt source and application relink materials are provided separately. Application source and account credentials are not published."
+        fi
+        gh release upload "$tag" bundle/windows/network_copier.exe bundle/windows/update.json bundle/windows/update.sig bundle/windows/network_copier-lgpl-relink.tar.gz --clobber
+        gh release edit "$tag" --draft=false --latest
+    - name: Validate Android bundle and publish
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        test -f bundle/android/android-update.json || exit 0
+        manifest=bundle/android/android-update.json
+        code=$(jq -er '.version_code | numbers' "$manifest")
+        version=$(jq -er '.version | strings' "$manifest")
+        test "$code" -gt 0
+        test "$code" -le 2100000000
+        [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+        test "$(jq -r .schema "$manifest")" = 1
+        test "$(jq -r .platform "$manifest")" = android
+        test "$(jq -r .package "$manifest")" = org.networkcopier.android
+        test "$(jq -r .validation_only "$manifest")" = false
+        test "$(stat -c %s bundle/android/network_copier.apk)" = "$(jq -r .size "$manifest")"
+        test "$(sha256sum bundle/android/network_copier.apk | cut -d' ' -f1)" = "$(jq -r .sha256 "$manifest")"
+        test "$(stat -c %s bundle/android/android-update.sig)" -le 80
+        test "$(stat -c %s bundle/android/android-update.sig)" -ge 8
+        tag="android-$code"
+        mkdir -p "$RUNNER_TEMP/android-existing"
+        if gh release view "$tag" >/dev/null 2>&1; then
+          if test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = false; then
+            gh release download "$tag" --pattern android-update.json --dir "$RUNNER_TEMP/android-existing"
+            cmp "$manifest" "$RUNNER_TEMP/android-existing/android-update.json"
           else
-            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "Network Copier $version ($id)" \
-              --notes "Windows x64 portable executable. Download network_copier.exe. Signed manifest accompanies automatic updates. LGPL Qt source and application relink materials are provided separately. Application source and account credentials are not published."
-          fi
-          gh release upload "$tag" bundle/windows/network_copier.exe bundle/windows/update.json bundle/windows/update.sig bundle/windows/network_copier-lgpl-relink.tar.gz --clobber
-          gh release edit "$tag" --draft=false --latest
-  android:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - name: Validate Android bundle and publish
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          test -f bundle/android/android-update.json || exit 0
-          manifest=bundle/android/android-update.json
-          code=$(jq -er '.version_code | numbers' "$manifest")
-          version=$(jq -er '.version | strings' "$manifest")
-          test "$code" -gt 0
-          test "$code" -le 2100000000
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          test "$(jq -r .schema "$manifest")" = 1
-          test "$(jq -r .platform "$manifest")" = android
-          test "$(jq -r .package "$manifest")" = org.networkcopier.android
-          test "$(jq -r .validation_only "$manifest")" = false
-          test "$(stat -c %s bundle/android/network_copier.apk)" = "$(jq -r .size "$manifest")"
-          test "$(sha256sum bundle/android/network_copier.apk | cut -d' ' -f1)" = "$(jq -r .sha256 "$manifest")"
-          test "$(stat -c %s bundle/android/android-update.sig)" -le 80
-          test "$(stat -c %s bundle/android/android-update.sig)" -ge 8
-          tag="android-$code"
-          mkdir -p "$RUNNER_TEMP/android-existing"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            if test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = false; then
-              gh release download "$tag" --pattern android-update.json --dir "$RUNNER_TEMP/android-existing"
-              cmp "$manifest" "$RUNNER_TEMP/android-existing/android-update.json"
-            else
-              gh release upload "$tag" bundle/android/* --clobber
-              gh release edit "$tag" --draft=false --latest=false
-            fi
-          else
-            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "Network Copier Android $version" \
-              --notes "Android 8.0+ / arm64-v8a and x86_64. Download network_copier.apk or use Check for updates in the app."
-            gh release upload "$tag" bundle/android/*
+            gh release upload "$tag" bundle/android/* --clobber
             gh release edit "$tag" --draft=false --latest=false
           fi
-          channel=android-current
-          if gh release view "$channel" >/dev/null 2>&1; then
-            mkdir -p "$RUNNER_TEMP/android-channel"
-            gh release download "$channel" --pattern android-update.json --dir "$RUNNER_TEMP/android-channel"
-            previous=$(jq -er '.version_code | numbers' "$RUNNER_TEMP/android-channel/android-update.json")
-            test "$previous" -le "$code"
-            if test "$previous" -eq "$code"; then
-              cmp "$manifest" "$RUNNER_TEMP/android-channel/android-update.json"
-              gh release edit "$channel" --draft=false --prerelease=false --latest=false
-              exit 0
-            fi
-          else
-            gh release create "$channel" --draft --target "$GITHUB_SHA" --title "Network Copier Android — latest" \
-              --notes "Download network_copier.apk or use Check for updates in the Android app."
+        else
+          gh release create "$tag" --draft --target "$GITHUB_SHA" --title "Network Copier Android $version" \
+            --notes "Android 8.0+ / arm64-v8a and x86_64. Download network_copier.apk or use Check for updates in the app."
+          gh release upload "$tag" bundle/android/*
+          gh release edit "$tag" --draft=false --latest=false
+        fi
+        channel=android-current
+        if gh release view "$channel" >/dev/null 2>&1; then
+          mkdir -p "$RUNNER_TEMP/android-channel"
+          gh release download "$channel" --pattern android-update.json --dir "$RUNNER_TEMP/android-channel"
+          previous=$(jq -er '.version_code | numbers' "$RUNNER_TEMP/android-channel/android-update.json")
+          test "$previous" -le "$code"
+          if test "$previous" -eq "$code"; then
+            cmp "$manifest" "$RUNNER_TEMP/android-channel/android-update.json"
+            gh release edit "$channel" --draft=false --prerelease=false --latest=false
+            exit 0
           fi
-          gh release upload "$channel" bundle/android/* --clobber
-          gh release edit "$channel" --draft=false --prerelease=false --latest=false
+        else
+          gh release create "$channel" --draft --target "$GITHUB_SHA" --title "Network Copier Android — latest" \
+            --notes "Download network_copier.apk or use Check for updates in the Android app."
+        fi
+        gh release upload "$channel" bundle/android/* --clobber
+        gh release edit "$channel" --draft=false --prerelease=false --latest=false
