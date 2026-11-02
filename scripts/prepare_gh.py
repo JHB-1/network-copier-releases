@@ -1,4 +1,4 @@
-"""공식 체크섬을 확인한 GitHub CLI를 현재 작업 경로에 준비"""
+"""공식 체크섬을 확인한 GitHub CLI와 jq를 작업 경로에 준비"""
 
 import hashlib
 import os
@@ -27,3 +27,19 @@ if not shutil.which("gh"):
 
 	with Path(os.environ["GITHUB_PATH"]).open("a", encoding="utf-8") as stream:
 		stream.write(str(root / f"gh_{version}_linux_amd64/bin") + "\n")
+
+if not shutil.which("jq"):
+	root = Path(os.environ["RUNNER_TEMP"]) / "network-copier-jq"
+	root.mkdir(parents=True, exist_ok=True)
+	binary = root / "jq"
+	address = "https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64"
+	with urllib.request.urlopen(address, timeout=60) as response:
+		content = response.read()
+
+	if hashlib.sha256(content).hexdigest() != "020468de7539ce70ef1bceaf7cde2e8c4f2ca6c3afb84642aabc5c97d9fc2a0d":
+		raise RuntimeError("jq checksum mismatch")
+
+	binary.write_bytes(content)
+	binary.chmod(0o755)
+	with Path(os.environ["GITHUB_PATH"]).open("a", encoding="utf-8") as stream:
+		stream.write(str(root) + "\n")

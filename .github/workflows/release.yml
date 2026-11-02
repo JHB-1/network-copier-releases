@@ -49,7 +49,7 @@ jobs:
       with:
         ref: ${{ inputs.pool_sha }}
         persist-credentials: false
-    - name: Prepare GitHub CLI
+    - name: Prepare publication tools
       run: python3 scripts/prepare_gh.py
     - name: Validate bundle and publish
       shell: bash
