@@ -22,7 +22,7 @@ run-name: ${{ inputs.pool_title || format('{0} / {1} / {2} / {3}', github.event.
 permissions:
   contents: write
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.pool_request }}
+  group: network-copier-publication
   cancel-in-progress: false
 jobs:
   build:
