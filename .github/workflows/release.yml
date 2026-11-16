@@ -121,7 +121,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/android-channel"
           gh release download "$channel" --pattern android-update.json --dir "$RUNNER_TEMP/android-channel"
           previous=$(jq -er '.version_code | numbers' "$RUNNER_TEMP/android-channel/android-update.json")
-          test "$previous" -le "$code"
+          test "$previous" -le "$code" || exit 0
           if test "$previous" -eq "$code"; then
             cmp "$manifest" "$RUNNER_TEMP/android-channel/android-update.json"
             gh release edit "$channel" --draft=false --prerelease=false --latest=false
